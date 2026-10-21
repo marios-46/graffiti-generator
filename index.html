@@ -56,11 +56,44 @@ textarea{min-height:44px;font-size:15px}
 .dd{position:relative}.dd summary{list-style:none;cursor:pointer;border:2px solid var(--ink);border-radius:999px;padding:8px 16px;font-weight:700;background:var(--bg)}.dd summary::-webkit-details-marker{display:none}
 .menu{position:absolute;bottom:115%;left:0;background:var(--panel);border:2px solid var(--ink);border-radius:14px;padding:6px;display:grid;gap:4px;z-index:5;min-width:220px}.menu button{border:0;text-align:left;border-radius:8px}
 @media (max-width:860px){main{grid-template-columns:1fr}}
+
+/* ===== AI ART ===== */
+.modes{display:flex;gap:8px;justify-content:center;width:100%;margin-top:8px}
+.modes button.on{background:var(--acc);color:#fff}
+#aiMain[hidden],#txtMain[hidden]{display:none}
+#aiMain{grid-template-columns:360px minmax(0,1fr)}
+.ai-l,.ai-r{display:grid;gap:12px;align-content:start;min-width:0}
+.ai-note{background:#e3f2c9;color:#2f5a08;border:1.5px solid #b9d98a;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ai-note{background:#25361a;color:#c6e79a;border-color:#3f5a28}}
+.ai-h{margin:0;font-size:11px;letter-spacing:.08em;font-weight:800;text-transform:uppercase;color:var(--mut)}
+#aiPrompt{min-height:70px}
+.ai-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ai-tile{position:relative;border-radius:12px;overflow:hidden;border:2px solid var(--ink);aspect-ratio:1/1;display:flex;align-items:flex-end}
+.ai-tile::before{content:"";position:absolute;inset:0;background:var(--g)}
+.ai-tile b{position:relative;color:#fff;font-size:12px;padding:6px 8px;text-shadow:0 1px 3px #000;width:100%}
+.ai-tile small{position:absolute;top:6px;left:8px;color:#fff;font-size:10px;font-weight:700;text-shadow:0 1px 3px #000}
+.ai-tile select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.ai-tile:focus-within{outline:3px solid var(--acc);outline-offset:2px}
+.ai-cnt{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ai-cnt button.on{background:var(--acc);color:#fff}
+.ai-go{width:100%;padding:12px;font-size:15px;background:var(--acc);color:#fff;border-radius:12px;letter-spacing:.05em;text-transform:uppercase}
+.ai-view{background:var(--bg);border:1.5px solid var(--line);border-radius:16px;padding:12px}
+.ai-view h2{margin:0 0 10px;font-size:15px;letter-spacing:.02em;text-transform:uppercase}
+.ai-img{border-radius:10px;overflow:hidden;background:repeating-conic-gradient(var(--chk) 0 25%,transparent 0 50%) 0 0/20px 20px;display:flex;align-items:center;justify-content:center;min-height:260px}
+.ai-img img{max-width:100%;max-height:60vh;display:block}
+.ai-dots{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.ai-dots i{width:8px;height:8px;border-radius:50%;background:var(--line);cursor:pointer}
+.ai-dots i.on{width:22px;border-radius:6px;background:var(--acc)}
+.ai-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ai-acts button{border-radius:12px;font-size:12px;text-transform:uppercase;padding:10px 6px}
+.ai-acts button:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:860px){#aiMain{grid-template-columns:1fr}.ai-acts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header><h1>Graffiti Studio</h1><p>Type your tag, spray it, save it.</p></header>
-<main>
+<header><h1>Graffiti Studio</h1><p>Type your tag, spray it, save it.</p>
+<div class="modes" id="modes"><button type="button" data-m="txt" class="on">Text Graffiti</button><button type="button" data-m="ai">AI Art</button></div></header>
+<main id="txtMain">
 <section id="ui"></section>
 <section class="right">
 <p class="hint">Choose a style, customize your design, and export it.</p>
@@ -70,6 +103,30 @@ textarea{min-height:44px;font-size:15px}
 <details class="dd"><summary>Download</summary><div class="menu"><button id="dpng">PNG image</button><button id="djpg">JPG image</button><button id="rec">WebM video (needs animation)</button></div></details>
 <button id="shr">Share</button><button class="p" id="rr">Reroll drips</button></div>
 <p class="note" id="msg">Pick a style, tweak the sliders, then save.</p>
+</section>
+</main>
+
+<main id="aiMain" hidden>
+<section class="ai-l">
+<div class="ai-note">AI generation uses credits. Describe your design, then click Generate Art.</div>
+<label><span class="ai-h">Describe your graffiti design</span><textarea id="aiPrompt" placeholder="e.g. I love Aiman in bold wildstyle letters"></textarea></label>
+<label><span class="ai-h">Upload an image (optional)</span><input type="file" id="aiRef" accept="image/*"></label>
+<div class="ai-tiles">
+<div class="ai-tile" style="--g:linear-gradient(135deg,#ff3d81,#ffe14d,#00b7ff)"><small>STYLE</small><b id="aiStyleL">Auto</b><select id="aiStyle" aria-label="Style"><option>Auto</option><option>Wildstyle</option><option>Bubble</option><option>Stencil</option><option>Tag</option><option>Realistic mural</option></select></div>
+<div class="ai-tile" style="--g:linear-gradient(135deg,#ff8a1f,#3a1a00,#ffd34d)"><small>LIGHTING</small><b id="aiLightL">Auto</b><select id="aiLight" aria-label="Lighting"><option>Auto</option><option>Daylight</option><option>Neon night</option><option>Golden hour</option><option>Studio</option></select></div>
+<div class="ai-tile" style="--g:linear-gradient(135deg,#7a2bff,#17c964,#ff5fa8)"><small>COLOR MOOD</small><b id="aiMoodL">Auto</b><select id="aiMood" aria-label="Color mood"><option>Auto</option><option>Vibrant</option><option>Pastel</option><option>Dark</option><option>Monochrome</option></select></div>
+</div>
+<div><span class="ai-h">Output count</span><div class="ai-cnt" id="aiCnt" style="margin-top:6px"><button type="button" class="on">1</button><button type="button">2</button><button type="button">3</button><button type="button">4</button></div></div>
+<div class="cols"><label><span class="ai-h">Aspect ratio</span><select id="aiRatio"><option>Auto</option><option>1:1</option><option>16:9</option><option>9:16</option><option>4:3</option></select></label>
+<label><span class="ai-h">Resolution</span><select id="aiRes"><option>1K</option><option>2K</option><option>4K</option></select></label></div>
+<button type="button" class="ai-go" id="aiGo">Generate Art</button>
+<p class="note" id="aiMsg"></p>
+</section>
+<section class="ai-r">
+<div class="ai-view"><h2>See what you can create</h2>
+<div class="ai-img" id="aiImg"><svg viewBox="0 0 600 340" width="100%" role="img" aria-label="Preview placeholder"><defs><linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset=".5" stop-color="#ff3d81"/><stop offset="1" stop-color="#00b7ff"/></linearGradient></defs><rect width="600" height="340" fill="#7d7d78"/><text x="300" y="190" text-anchor="middle" font-family="Permanent Marker,cursive" font-size="90" fill="url(#pg)" stroke="#111" stroke-width="5" paint-order="stroke">GRAFFITI</text></svg></div>
+<div class="ai-dots" id="aiDots"></div></div>
+<div class="ai-acts"><button type="button" id="aiEdit" disabled>Edit this version</button><button type="button" id="aiVar" disabled>Create a variation</button><button type="button" class="p" id="aiDl" disabled>Download</button></div>
 </section>
 </main>
 <script>
@@ -240,6 +297,39 @@ $('rec').onclick=()=>{const m=$('msg');
  mr.ondataavailable=e=>{if(e.data.size)ch.push(e.data)};
  mr.onstop=async()=>{try{await dl.save({filename:'graffiti.webm',data:new Blob(ch,{type:'video/webm'})});m.textContent='Saved.'}catch(e){m.textContent='Could not save the video.'}};
  mr.start();m.textContent='Recording 4 seconds…';t0=performance.now();setTimeout(()=>mr.stop(),4000)}catch(e){m.textContent='Could not record in this browser.'}};
+
+/* ===== AI ART logic ===== */
+const AI_ENDPOINT=''; // <- yahan apni AI API ka URL daalein. POST JSON bhejta hai, {images:["url",...]} wapas chahiye
+(function(){
+ const aiMain=$('aiMain'),txtMain=$('txtMain');let n=1,imgs=[],cur=0;
+ $('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;
+  txtMain.hidden=m!=='txt';aiMain.hidden=m!=='ai';
+  document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b===e.target));
+  document.querySelector('header p').textContent=m==='ai'?'Describe it, generate it, download it.':'Type your tag, spray it, save it.'};
+ [['aiStyle','aiStyleL'],['aiLight','aiLightL'],['aiMood','aiMoodL']].forEach(([a,b])=>$(a).onchange=()=>$(b).textContent=$(a).value);
+ $('aiCnt').onclick=e=>{if(e.target.tagName!=='BUTTON')return;n=+e.target.textContent;
+  [...$('aiCnt').children].forEach(b=>b.classList.toggle('on',b===e.target))};
+ function paint(){
+  const box=$('aiImg');
+  if(imgs.length){box.innerHTML='';const im=new Image();im.src=imgs[cur];im.alt='Generated graffiti';box.appendChild(im)}
+  $('aiDots').innerHTML=imgs.map((_,i)=>`<i class="${i===cur?'on':''}" data-i="${i}"></i>`).join('');
+  ['aiEdit','aiVar','aiDl'].forEach(id=>$(id).disabled=!imgs.length)};
+ $('aiDots').onclick=e=>{if(e.target.dataset.i!==undefined){cur=+e.target.dataset.i;paint()}};
+ async function gen(extra){
+  const m=$('aiMsg'),p=$('aiPrompt').value.trim();
+  if(!p){m.textContent='Pehle design ka description likhein.';return}
+  if(!AI_ENDPOINT){m.textContent='AI endpoint abhi connect nahi hai (AI_ENDPOINT set karein).';return}
+  const btn=$('aiGo');btn.disabled=true;btn.textContent='Generating...';m.textContent='';
+  try{
+   const r=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p+(extra?' '+extra:''),style:$('aiStyle').value,lighting:$('aiLight').value,mood:$('aiMood').value,count:n,ratio:$('aiRatio').value,resolution:$('aiRes').value})});
+   const d=await r.json();imgs=d.images||[];cur=0;paint();if(!imgs.length)m.textContent='Koi image nahi mili.'}
+  catch(e){m.textContent='Generate nahi ho saka. Dobara koshish karein.'}
+  btn.disabled=false;btn.textContent='Generate Art'}
+ $('aiGo').onclick=()=>gen();
+ $('aiVar').onclick=()=>gen('(variation)');
+ $('aiEdit').onclick=()=>{$('aiPrompt').focus();$('aiMsg').textContent='Description badlein aur Generate Art dabayein.'};
+ $('aiDl').onclick=()=>{if(!imgs.length)return;const a=document.createElement('a');a.href=imgs[cur];a.download='graffiti-ai.png';a.click()};
+})();
 render();
 document.fonts.ready.then(render);
 </script>
