@@ -34,13 +34,43 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 .note{font-size:12px;color:var(--mut);margin:0}
 hr{border:0;border-top:1.5px dashed var(--line);margin:2px 0;width:100%}
 @media (max-width:860px){main{grid-template-columns:1fr;padding:10px 12px 24px}.stage{position:static}}
+:root{--bg:#f3eee2;--panel:#faf6ec;--acc:#5f9e12}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--acc:#7cc21f}}
+:root[data-theme="dark"]{--acc:#7cc21f}
+header{justify-content:center;text-align:center;padding-top:24px}
+h1{color:var(--ink);font-size:44px}
+main{width:min(1060px,calc(100% - 24px));grid-template-columns:360px minmax(0,1fr);gap:24px;padding:22px;margin:10px auto 30px;background:var(--panel);border:2px solid var(--ink);border-radius:26px;box-shadow:6px 8px 0 rgba(0,0,0,.15)}
+#ui,.right{display:grid;gap:12px;align-content:start;min-width:0}
+.hint{margin:0;color:var(--mut)}
+button{border-radius:999px;font-weight:600;padding:8px 14px}
+#tabs button.on,button.p{background:var(--acc);color:#fff}
+.stage{position:static;padding:0;border-radius:16px;overflow:hidden;min-height:0;display:block}
+canvas{width:100%;max-height:none}
+textarea{min-height:44px;font-size:15px}
+.pane{grid-template-columns:1fr 1fr;align-content:start}.pane>*{grid-column:1/-1}.pane>label:has(input[type=range]){grid-column:auto}
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:176px;overflow:auto;padding:2px}
+.fb{background:#0e0e0e;color:#ffd34d;border:2px solid #0e0e0e;border-radius:12px;padding:8px 4px;display:grid;gap:2px;justify-items:center;font-weight:400}
+.fb:hover{background:#1c1c1c}.fb.on{border-color:var(--acc)}.fb b{font-weight:400;font-size:19px;line-height:1.15}.fb small{font-size:10px;color:#cfc8b8}
+.lb{display:block;margin-bottom:6px;font-weight:700;font-size:12px}
+.dd{position:relative}.dd summary{list-style:none;cursor:pointer;border:2px solid var(--ink);border-radius:999px;padding:8px 16px;font-weight:700;background:var(--bg)}.dd summary::-webkit-details-marker{display:none}
+.menu{position:absolute;bottom:115%;left:0;background:var(--panel);border:2px solid var(--ink);border-radius:14px;padding:6px;display:grid;gap:4px;z-index:5;min-width:220px}.menu button{border:0;text-align:left;border-radius:8px}
+@media (max-width:860px){main{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header><h1>Graffiti Studio</h1><p>Type your tag, spray it, save it.</p></header>
 <main>
+<section id="ui"></section>
+<section class="right">
+<p class="hint">Choose a style, customize your design, and export it.</p>
+<div class="row" id="pres"></div>
 <div class="stage"><canvas id="cv" width="1200" height="675"></canvas></div>
-<aside id="ui"></aside>
+<div class="row acts">
+<details class="dd"><summary>Download</summary><div class="menu"><button id="dpng">PNG image</button><button id="djpg">JPG image</button><button id="rec">WebM video (needs animation)</button></div></details>
+<button id="shr">Share</button><button class="p" id="rr">Reroll drips</button></div>
+<p class="note" id="msg">Pick a style, tweak the sliders, then save.</p>
+</section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -76,9 +106,10 @@ Sticker:{font:'Permanent Marker',c1:'#fff35c',c2:'#ff8a3d',oc:'#111111',sc:'#111
 Subway:{font:'Rubik Spray Paint',c1:'#7dfcff',c2:'#3d7bff',oc:'#071022',sc:'#ff2d95',sd:12,bg:'Subway tiles',bgc:'#1b2430',gl:22,dr:12,ds:10}
 });
 const ui=$('ui');
-const TM={text:0,font:0,ratio:0,fz:0,ls:0,rot:0,px:0,py:0,c1:1,c2:1,oc:1,ow:1,sc:1,sd:1,sh:1,stk:1,stc:1,gl:2,dr:2,dl:2,sp:2,ds:2,bg:3,bgc:3,bg2:3,bgf:3,an:4};
-const TABS=['Text','Style','Effects','Background','Animate'];
+const TM={font:0,rot:0,fz:0,px:0,py:0,ls:0,bg:1,bgc:1,bg2:1,bgf:1,c1:2,c2:2,oc:2,ow:2,sc:2,sd:2,sh:2,stk:2,stc:2,gl:2,dr:2,dl:2,sp:2,ds:2,an:3};
+const TABS=['Font','BG','Style','Animate'];
 const ctrl=([id,l,t,o])=>{
+ if(id==='font')return`<div><small class="lb">Select font</small><input type="hidden" id="font" value="Permanent Marker"><div class="fg">${o.map(v=>`<button type="button" class="fb" data-f="${v}"><b style="font-family:'${v}'">STREET</b><small>${v}</small></button>`).join('')}</div></div>`;
  if(t==='chk')return`<label class="k"><input type="checkbox" id="${id}"${o?' checked':''}>${l}</label>`;
  if(t==='file')return`<label>${l}<input type="file" id="${id}" accept="image/*"></label>`;
  if(t==='area')return`<label>${l}<textarea id="${id}">${o}</textarea></label>`;
@@ -86,10 +117,7 @@ const ctrl=([id,l,t,o])=>{
  if(t==='color')return`<label>${l}<input type="color" id="${id}" value="${o}"></label>`;
  return`<label>${l}<span><em id="${id}v">${o[2]}</em></span><input type="range" id="${id}" min="${o[0]}" max="${o[1]}" value="${o[2]}"></label>`;
 };
-ui.innerHTML=`<div class="row" id="tabs">${TABS.map((n,i)=>`<button data-t="${i}" class="${i?'':'on'}">${n}</button>`).join('')}</div>`+TABS.map((n,i)=>`<div class="pane" data-pane="${i}"${i?' hidden':''}>${C.filter(c=>TM[c[0]]===i).map(ctrl).join('')}${i===4?'<button id="rec">Record 4s video</button>':''}</div>`).join('')+`<hr><div class="row">${Object.keys(P).map(k=>`<button data-p="${k}">${k}</button>`).join('')}</div>
-<div class="row"><button id="rr">Reroll drips</button></div>
-<div class="row"><button class="p" id="dpng">Save PNG</button><button class="p" id="djpg">Save JPG</button></div>
-<p class="note" id="msg">Pick a style, tweak the sliders, then save.</p>`;
+ui.innerHTML=`<div class="cols">${['text','ratio'].map(k=>ctrl(C.find(c=>c[0]===k))).join('')}</div><div class="row" id="tabs">${TABS.map((n,i)=>`<button data-t="${i}" class="${i?'':'on'}">${n}</button>`).join('')}</div>`+TABS.map((n,i)=>`<div class="pane" data-pane="${i}"${i?' hidden':''}>${C.filter(c=>TM[c[0]]===i).map(ctrl).join('')}</div>`).join('');
 const g=id=>{const e=$(id);return e.type==='range'?+e.value:e.type==='checkbox'?e.checked:e.value};
 const cv=$('cv'),out=document.createElement('canvas'),x=out.getContext('2d'),tl=document.createElement('canvas'),t=tl.getContext('2d');
 let seed=7,busy=false,again=false;
@@ -97,7 +125,7 @@ function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let r=Math.imul(s^s>>>15,1|s);r
 async function render(){
  if(busy){again=true;return}busy=true;
  try{
- const f=g('font');
+ const f=g('font');document.querySelectorAll('.fb').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
  try{await document.fonts.load(`80px "${f}"`)}catch(e){}
  const[a,b]=g('ratio').split(':').map(Number);
  const W=a>=b?1200:720,H=Math.round(W*b/a);
@@ -165,9 +193,10 @@ async function render(){
  }finally{busy=false;if(again){again=false;render()}}
 }
 ui.addEventListener('input',e=>{const v=$(e.target.id+'v');if(v)v.textContent=e.target.value;render()});
-ui.addEventListener('click',e=>{
+document.addEventListener('click',e=>{
+ const fb=e.target.closest&&e.target.closest('.fb');if(fb){$('font').value=fb.dataset.f;render();return}
  const p=e.target.dataset&&e.target.dataset.p;
- if(p){const B={font:'Permanent Marker',ls:2,fz:100,px:0,py:0,rot:-4,ow:8,sd:16,sh:true,stk:0,gl:18,dr:16,dl:80,sp:45,ds:6,bg2:'#1a0f3a'},Q={...B,...P[p]};for(const k in Q){const el=$(k),val=Q[k];if(el.type==='checkbox')el.checked=val;else el.value=val;const v=$(k+'v');if(v)v.textContent=val}render();return}
+ if(p){const B={ratio:'16:9',bg:'Brick wall',bgc:'#6e3a2e',c1:'#ffe14d',c2:'#ff3d81',oc:'#111111',sc:'#00b7ff',font:'Permanent Marker',ls:2,fz:100,px:0,py:0,rot:-4,ow:8,sd:16,sh:true,stk:0,gl:18,dr:16,dl:80,sp:45,ds:6,bg2:'#1a0f3a'},Q={...B,...P[p]};for(const k in Q){const el=$(k),val=Q[k];if(el.type==='checkbox')el.checked=val;else el.value=val;const v=$(k+'v');if(v)v.textContent=val}render();return}
  if(e.target.dataset.t!==undefined){ui.querySelectorAll('.pane').forEach(d=>{d.hidden=d.dataset.pane!==e.target.dataset.t});ui.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b===e.target))}
 });
 $('rr').onclick=()=>{seed=Math.floor(Math.random()*1e6);render()};
@@ -185,6 +214,13 @@ async function save(kind){
 }
 $('dpng').onclick=()=>save('png');$('djpg').onclick=()=>save('jpg');
 (async()=>{try{dl=await claude.use('downloads')}catch(e){dl=null}})();
+Object.assign(P,{
+Avatar:{ratio:'1:1',font:'Bowlby One',c1:'#ffffff',c2:'#ff5fa8',oc:'#2a0a3a',sc:'#4b2bff',bg:'Gradient',bgc:'#ff8a3d',bg2:'#7a2bff',gl:10,dr:0,ds:12,sd:12},
+'Wall Piece':{font:'Rubik Spray Paint',c1:'#b6ff3a',c2:'#2fbf3a',oc:'#10300a',sc:'#ff8a1f',bg:'Brick wall',bgc:'#8a4a38',dr:14,sd:14,sp:60},
+Tag:{font:'Rock Salt',c1:'#ffffff',c2:'#ffd34d',oc:'#000000',ow:4,sd:6,bg:'Concrete',bgc:'#4a4a4f',dr:8,ds:0}
+});
+$('pres').innerHTML=[['Avatar','👤'],['Subway','🚇'],['Sticker','🏷️'],['Wall Piece','🧱'],['Tag','✍️']].map(([k,i])=>`<button data-p="${k}">${i} ${k}</button>`).join('');
+$('shr').onclick=async()=>{const m=$('msg');try{if(navigator.share)await navigator.share({title:'Graffiti Studio',url:location.href});else{await navigator.clipboard.writeText(location.href);m.textContent='Link copied.'}}catch(e){m.textContent='Could not share from here.'}};
 let bgimg=null,t0=0,raf=0;
 $('bgf').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{bgimg=im;$('bg').value='Your image';render()};im.src=URL.createObjectURL(f)};
 const ease=u=>1+2.70158*Math.pow(u-1,3)+1.70158*Math.pow(u-1,2);
