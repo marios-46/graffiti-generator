@@ -318,12 +318,18 @@ const AI_ENDPOINT=''; // <- yahan apni AI API ka URL daalein. POST JSON bhejta h
  async function gen(extra){
   const m=$('aiMsg'),p=$('aiPrompt').value.trim();
   if(!p){m.textContent='Pehle design ka description likhein.';return}
-  if(!AI_ENDPOINT){m.textContent='AI endpoint abhi connect nahi hai (AI_ENDPOINT set karein).';return}
   const btn=$('aiGo');btn.disabled=true;btn.textContent='Generating...';m.textContent='';
   try{
+   if(!AI_ENDPOINT){
+    const rt=$('aiRatio').value,rs={'1K':1024,'2K':1536,'4K':2048}[$('aiRes').value];
+    const [a,b]=(rt==='Auto'?'1:1':rt).split(':').map(Number),w=a>=b?rs:Math.round(rs*a/b),h=a>=b?Math.round(rs*b/a):rs;
+    const q=['graffiti street art',p+(extra?' variation':'')].concat($('aiStyle').value!=='Auto'?[$('aiStyle').value+' style']:[],$('aiLight').value!=='Auto'?[$('aiLight').value+' lighting']:[],$('aiMood').value!=='Auto'?[$('aiMood').value+' colors']:[],['vivid spray paint on wall, high detail']).join(', ');
+    const urls=Array.from({length:n},()=>`https://image.pollinations.ai/prompt/${encodeURIComponent(q)}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random()*1e6)}`);
+    await Promise.all(urls.map(u=>new Promise((ok,no)=>{const i=new Image();i.onload=ok;i.onerror=no;i.src=u})));
+    imgs=urls;cur=0;paint();btn.disabled=false;btn.textContent='Generate Art';return}
    const r=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p+(extra?' '+extra:''),style:$('aiStyle').value,lighting:$('aiLight').value,mood:$('aiMood').value,count:n,ratio:$('aiRatio').value,resolution:$('aiRes').value})});
    const d=await r.json();imgs=d.images||[];cur=0;paint();if(!imgs.length)m.textContent='Koi image nahi mili.'}
-  catch(e){m.textContent='Generate nahi ho saka. Dobara koshish karein.'}
+  catch(e){m.textContent='Generate nahi ho saka. Thori der baad dobara koshish karein.'}
   btn.disabled=false;btn.textContent='Generate Art'}
  $('aiGo').onclick=()=>gen();
  $('aiVar').onclick=()=>gen('(variation)');
