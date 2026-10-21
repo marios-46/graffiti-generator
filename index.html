@@ -315,24 +315,26 @@ const AI_ENDPOINT=''; // <- yahan apni AI API ka URL daalein. POST JSON bhejta h
   $('aiDots').innerHTML=imgs.map((_,i)=>`<i class="${i===cur?'on':''}" data-i="${i}"></i>`).join('');
   ['aiEdit','aiVar','aiDl'].forEach(id=>$(id).disabled=!imgs.length)};
  $('aiDots').onclick=e=>{if(e.target.dataset.i!==undefined){cur=+e.target.dataset.i;paint()}};
+ const cool=b=>{let t=45;b.disabled=true;const iv=setInterval(()=>{t--;if(t<=0){clearInterval(iv);b.disabled=false;b.textContent='Generate Art'}else b.textContent='Wait '+t+'s'},1000);b.textContent='Wait '+t+'s'};
  async function gen(extra){
   const m=$('aiMsg'),p=$('aiPrompt').value.trim();
   if(!p){m.textContent='Pehle design ka description likhein.';return}
   const btn=$('aiGo');btn.disabled=true;btn.textContent='Generating...';m.textContent='';
   try{
    if(!AI_ENDPOINT){
+    m.textContent='Free service 45 second mein 1 image deti hai, 1K aur Output count 1 rakhna behtar hai.';
     const rt=$('aiRatio').value,rs={'1K':1024,'2K':1536,'4K':2048}[$('aiRes').value];
     const [a,b]=(rt==='Auto'?'1:1':rt).split(':').map(Number),w=a>=b?rs:Math.round(rs*a/b),h=a>=b?Math.round(rs*b/a):rs;
     const q=['graffiti street art',p+(extra?' variation':'')].concat($('aiStyle').value!=='Auto'?[$('aiStyle').value+' style']:[],$('aiLight').value!=='Auto'?[$('aiLight').value+' lighting']:[],$('aiMood').value!=='Auto'?[$('aiMood').value+' colors']:[],['vivid spray paint on wall, high detail']).join(', ');
     const urls=Array.from({length:n},()=>`https://image.pollinations.ai/prompt/${encodeURIComponent(q)}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random()*1e6)}`);
     await Promise.all(urls.map(u=>new Promise((ok,no)=>{const i=new Image();i.onload=ok;i.onerror=no;i.src=u})));
-    imgs=urls;cur=0;paint();btn.disabled=false;btn.textContent='Generate Art';return}
+    imgs=urls;cur=0;paint();cool(btn);return}
    const r=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p+(extra?' '+extra:''),style:$('aiStyle').value,lighting:$('aiLight').value,mood:$('aiMood').value,count:n,ratio:$('aiRatio').value,resolution:$('aiRes').value})});
    const d=await r.json();imgs=d.images||[];cur=0;paint();if(!imgs.length)m.textContent='Koi image nahi mili.'}
   catch(e){m.textContent='Generate nahi ho saka. Thori der baad dobara koshish karein.'}
   btn.disabled=false;btn.textContent='Generate Art'}
  $('aiGo').onclick=()=>gen();
- $('aiVar').onclick=()=>gen('(variation)');
+ $('aiVar').onclick=()=>{if($('aiGo').disabled){$('aiMsg').textContent='Thora intezar karein, limit khatam hone ka countdown chal raha hai.';return}gen('(variation)')};
  $('aiEdit').onclick=()=>{$('aiPrompt').focus();$('aiMsg').textContent='Description badlein aur Generate Art dabayein.'};
  $('aiDl').onclick=()=>{if(!imgs.length)return;const a=document.createElement('a');a.href=imgs[cur];a.download='graffiti-ai.png';a.click()};
 })();
