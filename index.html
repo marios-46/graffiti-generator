@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Graffiti Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik+Wet+Paint&family=Rubik+Spray+Paint&family=Bangers&family=Rock+Salt&family=Sedgwick+Ave+Display&family=Bungee+Spice&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#efe9dd;--panel:#fbf7ee;--ink:#1b1814;--mut:#6a6357;--acc:#c2410c;--line:#d8cfbd;--chk:#d9d3c6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121110;--panel:#1c1a17;--ink:#f1ebdf;--mut:#a39b8b;--acc:#ff7a2e;--line:#38332b;--chk:#2a2824}}
+:root[data-theme="dark"]{--bg:#121110;--panel:#1c1a17;--ink:#f1ebdf;--mut:#a39b8b;--acc:#ff7a2e;--line:#38332b;--chk:#2a2824}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:18px 20px 6px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{margin:0;font:400 38px/1 "Permanent Marker","Marker Felt",cursive;transform:rotate(-1.5deg);color:var(--acc)}
+header p{margin:0;color:var(--mut)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:14px 20px 28px;max-width:1280px;margin:0 auto}
+.stage{background:repeating-conic-gradient(var(--chk) 0 25%,transparent 0 50%) 0 0/20px 20px;border:2px solid var(--ink);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:260px;align-self:start;position:sticky;top:12px}
+canvas{max-width:100%;max-height:72vh;height:auto;display:block}
+aside{background:var(--panel);border:2px solid var(--ink);border-radius:6px;padding:14px;display:grid;gap:10px}
+label{display:grid;gap:4px;font-weight:600;font-size:13px}
+label span{display:flex;justify-content:space-between;color:var(--mut);font-weight:500}
+textarea,select{width:100%;font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+textarea{resize:vertical;min-height:62px;font-size:17px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+input[type=color]{width:100%;height:34px;border:1.5px solid var(--line);border-radius:4px;background:var(--bg);padding:2px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;padding:9px 12px;border:2px solid var(--ink);border-radius:4px;background:var(--bg);color:var(--ink);cursor:pointer}
+button:hover{background:var(--line)}
+button.p{background:var(--acc);color:#fff;border-color:var(--ink);flex:1}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.note{font-size:12px;color:var(--mut);margin:0}
+hr{border:0;border-top:1.5px dashed var(--line);margin:2px 0;width:100%}
+@media (max-width:860px){main{grid-template-columns:1fr;padding:10px 12px 24px}.stage{position:static}}
+</style>
+</head>
+<body>
+<header><h1>Graffiti Studio</h1><p>Type your tag, spray it, save it.</p></header>
+<main>
+<div class="stage"><canvas id="cv" width="1200" height="675"></canvas></div>
+<aside id="ui"></aside>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const FONTS=['Permanent Marker','Rubik Wet Paint','Rubik Spray Paint','Bangers','Rock Salt','Sedgwick Ave Display','Bungee Spice'];
+const C=[
+['text','Your text','area','Graffiti\nStudio'],
+['font','Style','sel',FONTS],
+['ratio','Canvas ratio','sel',['16:9','1:1','9:16','4:3']],
+['bg','Background','sel',['Brick wall','Concrete','Solid color','Transparent']],
+['bgc','Wall color','color','#6e3a2e'],
+['c1','Fill top','color','#ffe14d'],
+['c2','Fill bottom','color','#ff3d81'],
+['oc','Outline color','color','#111111'],
+['sc','3D shadow color','color','#00b7ff'],
+['ow','Outline width','range',[0,30,8]],
+['sd','3D depth','range',[0,50,16]],
+['gl','Glow','range',[0,60,18]],
+['rot','Tilt (degrees)','range',[-15,15,-4]],
+['dr','Drips','range',[0,45,16]],
+['dl','Drip length','range',[10,220,80]],
+['sp','Spray dots','range',[0,100,45]]
+];
+const P={
+Toxic:{c1:'#d7ff3a',c2:'#17c964',oc:'#0b1a0b',sc:'#7a00ff',bg:'Concrete',bgc:'#3b3d42',gl:30,dr:22},
+Bubblegum:{c1:'#ffffff',c2:'#ff5fa8',oc:'#2a0a3a',sc:'#4b2bff',bg:'Brick wall',bgc:'#5a2a3a',gl:12,dr:10},
+Gold:{c1:'#fff3a0',c2:'#e08a00',oc:'#1a0f00',sc:'#7a1f00',bg:'Solid color',bgc:'#15100a',gl:35,dr:6}
+};
+const ui=$('ui');
+ui.innerHTML=C.map(([id,l,t,o])=>{
+ if(t==='area')return`<label>${l}<textarea id="${id}">${o}</textarea></label>`;
+ if(t==='sel')return`<label>${l}<select id="${id}">${o.map(v=>`<option>${v}</option>`).join('')}</select></label>`;
+ if(t==='color')return`<label>${l}<input type="color" id="${id}" value="${o}"></label>`;
+ return`<label>${l}<span><em id="${id}v">${o[2]}</em></span><input type="range" id="${id}" min="${o[0]}" max="${o[1]}" value="${o[2]}"></label>`;
+}).join('')+`<hr><div class="row">${Object.keys(P).map(k=>`<button data-p="${k}">${k}</button>`).join('')}</div>
+<div class="row"><button id="rr">Reroll drips</button></div>
+<div class="row"><button class="p" id="dpng">Save PNG</button><button class="p" id="djpg">Save JPG</button></div>
+<p class="note" id="msg">Pick a style, tweak the sliders, then save.</p>`;
+const g=id=>{const e=$(id);return e.type==='range'?+e.value:e.value};
+const cv=$('cv'),x=cv.getContext('2d'),tl=document.createElement('canvas'),t=tl.getContext('2d');
+let seed=7,busy=false,again=false;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let r=Math.imul(s^s>>>15,1|s);r=r+Math.imul(r^r>>>7,61|r)^r;return((r^r>>>14)>>>0)/4294967296}}
+async function render(){
+ if(busy){again=true;return}busy=true;
+ try{
+ const f=g('font');
+ try{await document.fonts.load(`80px "${f}"`)}catch(e){}
+ const[a,b]=g('ratio').split(':').map(Number);
+ const W=a>=b?1200:720,H=Math.round(W*b/a);
+ cv.width=tl.width=W;cv.height=tl.height=H;
+ const R=rng(seed),bm=g('bg'),bc=g('bgc');
+ if(bm!=='Transparent'){
+  x.fillStyle=bc;x.fillRect(0,0,W,H);
+  if(bm==='Brick wall'){
+   const bh=64,bw=160;x.strokeStyle='rgba(0,0,0,.35)';x.lineWidth=4;
+   for(let r=0;r*bh<H+bh;r++){const y=r*bh,o=r%2?bw/2:0;
+    x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();
+    for(let c=-1;c*bw<W+bw;c++){x.beginPath();x.moveTo(c*bw+o,y);x.lineTo(c*bw+o,y+bh);x.stroke();
+     x.fillStyle=`rgba(${R()<.5?'0,0,0':'255,255,255'},${R()*.09})`;x.fillRect(c*bw+o+2,y+2,bw-4,bh-4)}}}
+  for(let i=0;i<7000;i++){x.fillStyle=`rgba(${R()<.55?'0,0,0':'255,255,255'},${R()*.1})`;x.fillRect(R()*W,R()*H,R()*6+1,R()*6+1)}
+ }
+ const lines=g('text').split('\n').filter(s=>s.length),n=Math.max(lines.length,1);
+ if(!lines.length){busy=false;return}
+ let fs=300;t.font=`${fs}px "${f}"`;
+ const mw=Math.max(...lines.map(s=>t.measureText(s).width));
+ fs=Math.min(fs*W*.84/mw,H*.8/(n*1.15),420);const lh=fs*1.12;
+ t.font=`${fs}px "${f}"`;t.textAlign='center';t.textBaseline='middle';t.lineJoin='round';t.miterLimit=2;
+ const ow=g('ow'),sd=g('sd');
+ t.save();t.translate(W/2,H/2);t.rotate(g('rot')*Math.PI/180);
+ const each=fn=>lines.forEach((s,i)=>fn(s,(i-(lines.length-1)/2)*lh));
+ for(let d=sd;d>=1;d--){t.fillStyle=t.strokeStyle=g('sc');t.lineWidth=ow*2;each((s,y)=>{if(ow>0)t.strokeText(s,d,y+d);t.fillText(s,d,y+d)})}
+ if(ow>0){t.strokeStyle=g('oc');t.lineWidth=ow*2;each((s,y)=>t.strokeText(s,0,y))}
+ const gr=t.createLinearGradient(0,-lh*n/2,0,lh*n/2);gr.addColorStop(.25,g('c1'));gr.addColorStop(.85,g('c2'));
+ t.fillStyle=gr;each((s,y)=>t.fillText(s,0,y));
+ t.restore();
+ const id=t.getImageData(0,0,W,H).data;
+ const A=(px,py)=>id[(py*W+px)*4+3];
+ // drips
+ t.lineCap='round';
+ for(let k=0;k<g('dr');k++){
+  const cx=Math.floor(R()*W);let y0=-1;
+  for(let y=H-1;y>0;y--)if(A(cx,y)>200){y0=y;break}
+  const w=4+R()*8,len=g('dl')*(.3+R()*.9);if(y0<0||y0+len>H)continue;
+  const sy=Math.max(0,y0-ow*2-6),i=(sy*W+cx)*4;
+  const col=`rgb(${id[i]},${id[i+1]},${id[i+2]})`;
+  t.strokeStyle=t.fillStyle=col;t.lineWidth=w;
+  t.beginPath();t.moveTo(cx,y0-w);t.lineTo(cx,y0+len);t.stroke();
+  t.beginPath();t.arc(cx,y0+len,w*.9,0,7);t.fill();
+ }
+ // spray
+ const c1=g('c1'),c2=g('c2');
+ for(let i=0;i<g('sp')*70;i++){
+  let px=0,py=0,ok=false;
+  for(let j=0;j<12&&!ok;j++){px=Math.floor(R()*W);py=Math.floor(R()*H);ok=A(px,py)>200}
+  if(!ok)continue;
+  const an=R()*6.283,rd=R()*R()*90+4;
+  x.globalAlpha=.25+R()*.55;x.fillStyle=R()<.5?c1:c2;
+  x.beginPath();x.arc(px+Math.cos(an)*rd,py+Math.sin(an)*rd,R()*2.2+.5,0,7);x.fill();
+ }
+ x.globalAlpha=1;
+ const gl=g('gl');
+ x.save();if(gl>0){x.shadowColor=c2;x.shadowBlur=gl}
+ x.drawImage(tl,0,0);if(gl>0)x.drawImage(tl,0,0);x.restore();
+ }finally{busy=false;if(again){again=false;render()}}
+}
+ui.addEventListener('input',e=>{const v=$(e.target.id+'v');if(v)v.textContent=e.target.value;render()});
+ui.addEventListener('click',e=>{
+ const p=e.target.dataset&&e.target.dataset.p;
+ if(p){for(const k in P[p]){$(k).value=P[p][k];const v=$(k+'v');if(v)v.textContent=P[p][k]}render()}
+});
+$('rr').onclick=()=>{seed=Math.floor(Math.random()*1e6);render()};
+let dl=null;
+async function save(kind){
+ const m=$('msg');
+ if(!dl){m.textContent='Saving is not available here. Open the page in a full tab and right-click the image to save it.';return}
+ await render();
+ let src=cv;
+ if(kind==='jpg'){src=document.createElement('canvas');src.width=cv.width;src.height=cv.height;const c=src.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,src.width,src.height);c.drawImage(cv,0,0)}
+ src.toBlob(async b=>{
+  try{await dl.save({filename:`graffiti.${kind}`,data:b});m.textContent='Saved.'}
+  catch(e){m.textContent=e&&e.code==='declined'?'Save cancelled.':'Could not save this file.'}
+ },kind==='jpg'?'image/jpeg':'image/png',.95);
+}
+$('dpng').onclick=()=>save('png');$('djpg').onclick=()=>save('jpg');
+(async()=>{try{dl=await claude.use('downloads')}catch(e){dl=null}})();
+render();
+document.fonts.ready.then(render);
+</script>
+</body>
+</html>
